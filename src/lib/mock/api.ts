@@ -335,6 +335,7 @@ export async function registerMock(
     id: newId(),
     email,
     isAdmin: false,
+    isLocked: false,
     createdAt: new Date().toISOString(),
   };
   return apiDelay(newUser);

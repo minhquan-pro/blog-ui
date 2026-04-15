@@ -15,11 +15,13 @@ import { apiFetch } from "./client";
 
 const apiBase = import.meta.env.VITE_API_URL?.replace(/\/$/, "") ?? "";
 
-/** Upload ảnh bìa (multipart). Trả về URL hiển thị (path tuyệt đối từ origin). */
-export async function uploadCoverImage(file: File): Promise<string> {
+async function uploadImageFile(
+  path: "/api/uploads/cover" | "/api/uploads/avatar",
+  file: File,
+): Promise<string> {
   const form = new FormData();
   form.append("file", file);
-  const url = `${apiBase}/api/uploads/cover`;
+  const url = `${apiBase}${path}`;
   const res = await fetch(url, {
     method: "POST",
     credentials: "include",
@@ -34,6 +36,32 @@ export async function uploadCoverImage(file: File): Promise<string> {
   const d = data as { url?: string };
   if (!d?.url) throw new Error("Phản hồi upload không hợp lệ");
   return d.url;
+}
+
+/** Upload ảnh bìa (multipart). Trả về URL hiển thị (path tuyệt đối từ origin). */
+export async function uploadCoverImage(file: File): Promise<string> {
+  return uploadImageFile("/api/uploads/cover", file);
+}
+
+/** Upload ảnh đại diện (multipart). Trả về path `/uploads/...` trên API. */
+export async function uploadAvatarImage(file: File): Promise<string> {
+  return uploadImageFile("/api/uploads/avatar", file);
+}
+
+export interface PatchMyProfilePayload {
+  displayName?: string;
+  username?: string;
+  bio?: string;
+  avatarUrl?: string;
+}
+
+export async function patchMyProfile(
+  payload: PatchMyProfilePayload,
+): Promise<UserProfile> {
+  return apiFetch<UserProfile>("/api/me/profile", {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
 }
 
 export interface EditorPostPayload {
@@ -232,6 +260,31 @@ export async function getBookmarksList(): Promise<Post[]> {
   return apiFetch<Post[]>("/api/me/bookmarks");
 }
 
+export async function getMyPosts(): Promise<Post[]> {
+  return apiFetch<Post[]>("/api/me/posts");
+}
+
+export type QuickPostStatus = "archived" | "published" | "unlisted";
+
+export async function patchPostStatus(
+  postId: string,
+  status: QuickPostStatus,
+): Promise<Post> {
+  return apiFetch<Post>(
+    `/api/posts/${encodeURIComponent(postId)}/status`,
+    {
+      method: "PATCH",
+      body: JSON.stringify({ status }),
+    },
+  );
+}
+
+export async function deletePost(postId: string): Promise<Post> {
+  return apiFetch<Post>(`/api/posts/${encodeURIComponent(postId)}`, {
+    method: "DELETE",
+  });
+}
+
 export async function getComments(postId: string): Promise<Comment[]> {
   return apiFetch<Comment[]>(
     `/api/posts/${encodeURIComponent(postId)}/comments`,
@@ -389,6 +442,10 @@ export async function fetchAuthMe(): Promise<{
   const base = import.meta.env.VITE_API_URL?.replace(/\/$/, "") ?? "";
   const res = await fetch(`${base}/api/auth/me`, { credentials: "include" });
   if (res.status === 401) {
+    return null;
+  }
+  if (res.status === 403) {
+    await fetch(`${base}/api/auth/logout`, { method: "POST", credentials: "include" });
     return null;
   }
   if (!res.ok) {
