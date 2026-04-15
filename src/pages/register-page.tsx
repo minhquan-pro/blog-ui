@@ -20,11 +20,13 @@ export function RegisterPage() {
     e.preventDefault();
     setPending(true);
     try {
-      const ok = await register(email, password, displayName, username);
-      if (ok) {
-        toast.success("Đăng ký demo — đã đăng nhập với tài khoản demo");
+      const result = await register(email, password, displayName, username);
+      if (result.ok) {
+        toast.success("Đăng ký thành công — đã đăng nhập.");
         navigate("/");
-      } else toast.error("Không thể đăng ký (demo)");
+      } else {
+        toast.error(result.error);
+      }
     } finally {
       setPending(false);
     }

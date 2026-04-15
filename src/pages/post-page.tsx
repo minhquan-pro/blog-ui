@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { Bookmark, Clapperboard } from "lucide-react";
+import { Bookmark, Heart } from "lucide-react";
 import { toast } from "sonner";
 
 import { ArticleBody } from "@/components/post/article-body";
@@ -8,7 +8,7 @@ import { CommentThread } from "@/components/comment/comment-thread";
 import { useAuth } from "@/contexts/auth-context";
 import {
   bookmarkToggle,
-  clapSet,
+  likeSet,
   followToggle,
   getComments,
   getPostById,
@@ -23,7 +23,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
-import { Slider } from "@/components/ui/slider";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export function PostPage() {
@@ -32,7 +31,7 @@ export function PostPage() {
   const [post, setPost] = useState<Post | null | undefined>(undefined);
   const [comments, setComments] = useState<Comment[]>([]);
   const [allTags, setAllTags] = useState<Tag[]>([]);
-  const [clapLocal, setClapLocal] = useState(0);
+  const [likedLocal, setLikedLocal] = useState(false);
   const [following, setFollowing] = useState(false);
   const [bookmarked, setBookmarked] = useState(false);
 
@@ -44,7 +43,7 @@ export function PostPage() {
       return;
     }
     setPost(pathData.post);
-    setClapLocal(pathData.viewerClapCount);
+    setLikedLocal(pathData.viewerLiked);
     setBookmarked(pathData.viewerHasBookmarked);
     setFollowing(pathData.viewerIsFollowingAuthor);
 
@@ -123,16 +122,16 @@ export function PostPage() {
     toast.message(now ? "Đã lưu vào thư viện" : "Đã gỡ khỏi thư viện");
   };
 
-  const onClapChange = async (v: number | readonly number[]) => {
+  const onLikeToggle = async () => {
     if (!user || !post) {
-      toast.info("Đăng nhập để vỗ tay.");
+      toast.info("Đăng nhập để thích bài.");
       return;
     }
-    const raw = Array.isArray(v) ? v[0] : v;
-    const n = typeof raw === "number" ? raw : 0;
-    setClapLocal(n);
-    const updated = await clapSet(post.id, n);
+    const next = !likedLocal;
+    setLikedLocal(next);
+    const updated = await likeSet(post.id, next);
     if (updated) setPost(updated);
+    else setLikedLocal(!next);
   };
 
   const onComment = async (parentId: string | null, body: string) => {
@@ -235,20 +234,23 @@ export function PostPage() {
       </header>
 
       <div className="mt-8 flex flex-wrap items-center gap-4 border-y border-border py-4">
-        <div className="flex min-w-[200px] flex-1 flex-col gap-2">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Clapperboard className="size-4" aria-hidden />
-            <span>Vỗ tay ({post.clapCount})</span>
-          </div>
-          <Slider
-            value={[clapLocal]}
-            onValueChange={(v) => void onClapChange(v)}
-            max={50}
-            step={1}
+        <div className="flex min-w-[200px] flex-1 flex-wrap items-center gap-3">
+          <Button
+            type="button"
+            variant={likedLocal ? "secondary" : "outline"}
+            size="sm"
+            className="gap-2"
             disabled={!user}
-            aria-label="Số lần vỗ tay"
-          />
-          <span className="text-xs text-muted-foreground">{clapLocal} / 50</span>
+            aria-pressed={likedLocal}
+            aria-label={likedLocal ? "Bỏ thích" : "Thích bài"}
+            onClick={() => void onLikeToggle()}
+          >
+            <Heart
+              className={`size-4 ${likedLocal ? "fill-current" : ""}`}
+              aria-hidden
+            />
+            Thích ({post.likeCount})
+          </Button>
         </div>
         <div className="flex flex-wrap gap-2">
           <Button

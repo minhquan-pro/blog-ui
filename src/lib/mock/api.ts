@@ -297,15 +297,19 @@ export function bookmarkedState(postId: string): boolean {
   return isBookmarked(postId);
 }
 
-export async function clapSet(postId: string, count: number): Promise<Post | undefined> {
+export async function likeSet(
+  postId: string,
+  liked: boolean,
+): Promise<Post | undefined> {
   const uid = getSessionUserId();
   if (!uid) return apiDelay(undefined);
-  const prev = getClapForUser(uid, postId);
+  const prev = getClapForUser(uid, postId) > 0 ? 1 : 0;
+  const next = liked ? 1 : 0;
   const post = getPostById(postId);
   if (!post) return apiDelay(undefined);
-  const delta = count - prev;
-  post.clapCount = Math.max(0, post.clapCount + delta);
-  setClapForUser({ userId: uid, postId, count });
+  const delta = next - prev;
+  post.likeCount = Math.max(0, post.likeCount + delta);
+  setClapForUser({ userId: uid, postId, count: next });
   upsertPost({ ...post });
   return apiDelay(post);
 }
@@ -330,6 +334,7 @@ export async function registerMock(
   const newUser: User = {
     id: newId(),
     email,
+    isAdmin: false,
     createdAt: new Date().toISOString(),
   };
   return apiDelay(newUser);
@@ -383,6 +388,19 @@ export async function savePost(
   authorId: string,
   payload: EditorPostPayload,
 ): Promise<Post> {
+  if (!postId && payload.status === "draft") {
+    throw new Error("Bản nháp mới chỉ lưu trên thiết bị.");
+  }
+  const has =
+    payload.title.trim().length > 0 ||
+    payload.subtitle.trim().length > 0 ||
+    payload.body.trim().length > 0 ||
+    payload.excerpt.trim().length > 0;
+  if (!has) {
+    throw new Error(
+      "Bài viết cần có ít nhất tiêu đề, nội dung, phụ đề hoặc tóm tắt.",
+    );
+  }
   const tagIds = resolveTagIds(payload.tagSlugs);
   const now = new Date().toISOString();
   const slugBase = payload.title
@@ -434,7 +452,7 @@ export async function savePost(
     status: payload.status,
     publishedAt,
     readingTimeMinutes: readingTime(payload.body),
-    clapCount: 0,
+    likeCount: 0,
     responseCount: 0,
     deletedAt: null,
     createdAt: now,

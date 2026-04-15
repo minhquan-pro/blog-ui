@@ -141,5 +141,25 @@ function NotificationBody({
       </p>
     );
   }
+  if (item.type === "new_like" || item.type === "new_clap") {
+    const actor = item.payload.actorId
+      ? actors[item.payload.actorId]
+      : undefined;
+    return (
+      <p>
+        {actor ? (
+          <Link
+            to={`/u/${actor.username}`}
+            className="font-medium text-accent-foreground underline"
+          >
+            {actor.displayName}
+          </Link>
+        ) : (
+          "Ai đó"
+        )}{" "}
+        đã thích bài của bạn.
+      </p>
+    );
+  }
   return <p>Thông báo ({item.type})</p>;
 }

@@ -26,7 +26,7 @@ interface AuthContextValue {
     password: string,
     displayName: string,
     username: string,
-  ) => Promise<boolean>;
+  ) => Promise<{ ok: true } | { ok: false; error: string }>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -88,9 +88,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const me = await registerApi(email, password, displayName, username);
         setUser(me.user);
         setProfile(me.profile);
-        return true;
-      } catch {
-        return false;
+        return { ok: true } as const;
+      } catch (e) {
+        const msg =
+          e instanceof Error ? e.message : "Đăng ký thất bại — kiểm tra API và kết nối mạng.";
+        return { ok: false as const, error: msg };
       }
     },
     [],

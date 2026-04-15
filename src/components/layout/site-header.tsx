@@ -168,7 +168,11 @@ export function SiteHeader() {
 
           {isAuthenticated ? (
             <>
-              {iconLink("/notifications", "Thông báo", <Bell className="size-4" />)}
+              {iconLink(
+                "/notifications",
+                "Thông báo",
+                <Bell className="size-4" />,
+              )}
               {iconLink("/me", "Thư viện", <BookMarked className="size-4" />)}
               <Link
                 to="/write"
@@ -228,7 +232,10 @@ export function SiteHeader() {
               >
                 Đăng nhập
               </Link>
-              <Link to="/register" className={cn(buttonVariants({ size: "sm" }))}>
+              <Link
+                to="/register"
+                className={cn(buttonVariants({ size: "sm" }))}
+              >
                 Đăng ký
               </Link>
             </>
