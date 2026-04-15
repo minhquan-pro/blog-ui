@@ -13,6 +13,7 @@ export interface User {
   id: string;
   email: string;
   isAdmin: boolean;
+  isLocked: boolean;
   createdAt: string;
 }
 

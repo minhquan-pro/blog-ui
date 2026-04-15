@@ -16,18 +16,21 @@ export const SEED_USERS: User[] = [
     id: "u-demo",
     email: "demo@editorial.local",
     isAdmin: false,
+    isLocked: false,
     createdAt: now,
   },
   {
     id: "u-1",
     email: "lan@example.com",
     isAdmin: false,
+    isLocked: false,
     createdAt: now,
   },
   {
     id: "u-2",
     email: "minh@example.com",
     isAdmin: false,
+    isLocked: false,
     createdAt: now,
   },
 ];
