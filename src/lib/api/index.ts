@@ -13,6 +13,29 @@ import type {
 
 import { apiFetch } from "./client";
 
+const apiBase = import.meta.env.VITE_API_URL?.replace(/\/$/, "") ?? "";
+
+/** Upload ảnh bìa (multipart). Trả về URL hiển thị (path tuyệt đối từ origin). */
+export async function uploadCoverImage(file: File): Promise<string> {
+  const form = new FormData();
+  form.append("file", file);
+  const url = `${apiBase}/api/uploads/cover`;
+  const res = await fetch(url, {
+    method: "POST",
+    credentials: "include",
+    body: form,
+  });
+  const text = await res.text();
+  const data = text ? (JSON.parse(text) as unknown) : null;
+  if (!res.ok) {
+    const d = data as { error?: string };
+    throw new Error(typeof d?.error === "string" ? d.error : res.statusText);
+  }
+  const d = data as { url?: string };
+  if (!d?.url) throw new Error("Phản hồi upload không hợp lệ");
+  return d.url;
+}
+
 export interface EditorPostPayload {
   title: string;
   subtitle: string;
@@ -26,7 +49,7 @@ export interface EditorPostPayload {
 
 export interface PostReadPayload {
   post: Post;
-  viewerClapCount: number;
+  viewerLiked: boolean;
   viewerHasBookmarked: boolean;
   viewerIsFollowingAuthor: boolean;
 }
@@ -49,7 +72,9 @@ export async function getProfileByUserId(
   userId: string,
 ): Promise<UserProfile | undefined> {
   try {
-    return await apiFetch<UserProfile>(`/api/users/id/${encodeURIComponent(userId)}/profile`);
+    return await apiFetch<UserProfile>(
+      `/api/users/id/${encodeURIComponent(userId)}/profile`,
+    );
   } catch {
     return undefined;
   }
@@ -110,10 +135,13 @@ export async function setMemberRole(
   role: PublicationRole,
 ): Promise<boolean> {
   try {
-    await apiFetch(`/api/publications/${encodeURIComponent(publicationSlug)}/members/${encodeURIComponent(userId)}`, {
-      method: "PATCH",
-      body: JSON.stringify({ role }),
-    });
+    await apiFetch(
+      `/api/publications/${encodeURIComponent(publicationSlug)}/members/${encodeURIComponent(userId)}`,
+      {
+        method: "PATCH",
+        body: JSON.stringify({ role }),
+      },
+    );
     return true;
   } catch {
     return false;
@@ -130,7 +158,8 @@ export async function getPostByAuthorSlug(
 ): Promise<Post | undefined> {
   const data = await getPostForReader(username, postSlug);
   if (!data) return undefined;
-  if (data.status !== "published" && data.status !== "unlisted") return undefined;
+  if (data.status !== "published" && data.status !== "unlisted")
+    return undefined;
   return data;
 }
 
@@ -163,7 +192,9 @@ export async function getPostByPathWithViewer(
 
 export async function getPostById(postId: string): Promise<Post | undefined> {
   try {
-    const data = await apiFetch<PostReadPayload>(`/api/posts/${encodeURIComponent(postId)}`);
+    const data = await apiFetch<PostReadPayload>(
+      `/api/posts/${encodeURIComponent(postId)}`,
+    );
     return data.post;
   } catch {
     return undefined;
@@ -171,9 +202,7 @@ export async function getPostById(postId: string): Promise<Post | undefined> {
 }
 
 export async function getPostsForProfile(username: string): Promise<Post[]> {
-  return apiFetch<Post[]>(
-    `/api/users/${encodeURIComponent(username)}/posts`,
-  );
+  return apiFetch<Post[]>(`/api/users/${encodeURIComponent(username)}/posts`);
 }
 
 export async function getPostsForPublicationSlug(
@@ -204,7 +233,9 @@ export async function getBookmarksList(): Promise<Post[]> {
 }
 
 export async function getComments(postId: string): Promise<Comment[]> {
-  return apiFetch<Comment[]>(`/api/posts/${encodeURIComponent(postId)}/comments`);
+  return apiFetch<Comment[]>(
+    `/api/posts/${encodeURIComponent(postId)}/comments`,
+  );
 }
 
 export async function postComment(
@@ -213,10 +244,13 @@ export async function postComment(
   body: string,
 ): Promise<Comment | undefined> {
   try {
-    return await apiFetch<Comment>(`/api/posts/${encodeURIComponent(postId)}/comments`, {
-      method: "POST",
-      body: JSON.stringify({ body, parentId }),
-    });
+    return await apiFetch<Comment>(
+      `/api/posts/${encodeURIComponent(postId)}/comments`,
+      {
+        method: "POST",
+        body: JSON.stringify({ body, parentId }),
+      },
+    );
   } catch {
     return undefined;
   }
@@ -231,7 +265,10 @@ export async function followToggle(targetUserId: string): Promise<boolean> {
 }
 
 /** @deprecated Dùng viewer flags từ API (by-path / profile) thay cho mock */
-export function followingState(viewerId: string | null, authorId: string): boolean {
+export function followingState(
+  viewerId: string | null,
+  authorId: string,
+): boolean {
   void viewerId;
   void authorId;
   return false;
@@ -251,26 +288,36 @@ export function bookmarkedState(_postId: string): boolean {
   return false;
 }
 
-export async function clapSet(postId: string, count: number): Promise<Post | undefined> {
+export async function likeSet(
+  postId: string,
+  liked: boolean,
+): Promise<Post | undefined> {
   try {
-    return await apiFetch<Post>(`/api/posts/${encodeURIComponent(postId)}/clap`, {
-      method: "PUT",
-      body: JSON.stringify({ count }),
-    });
+    return await apiFetch<Post>(
+      `/api/posts/${encodeURIComponent(postId)}/like`,
+      {
+        method: "PUT",
+        body: JSON.stringify({ liked }),
+      },
+    );
   } catch {
     return undefined;
   }
 }
 
-/** @deprecated Dùng viewerClapCount từ getPostByPathWithViewer */
+/** @deprecated Dùng viewerLiked từ getPostByPathWithViewer */
 export function clapCountForViewer(_postId: string): number {
   void _postId;
   return 0;
 }
 
-export async function getEditablePost(postId: string): Promise<Post | undefined> {
+export async function getEditablePost(
+  postId: string,
+): Promise<Post | undefined> {
   try {
-    return await apiFetch<Post>(`/api/posts/${encodeURIComponent(postId)}/edit`);
+    return await apiFetch<Post>(
+      `/api/posts/${encodeURIComponent(postId)}/edit`,
+    );
   } catch {
     return undefined;
   }
@@ -282,6 +329,9 @@ export async function savePost(
   payload: EditorPostPayload,
 ): Promise<Post> {
   void authorId;
+  if (!postId && payload.status === "draft") {
+    throw new Error("Bản nháp mới chỉ lưu trên thiết bị.");
+  }
   if (postId) {
     return apiFetch<Post>(`/api/posts/${encodeURIComponent(postId)}`, {
       method: "PATCH",
@@ -294,7 +344,9 @@ export async function savePost(
   });
 }
 
-export async function getNotificationsForCurrentUser(): Promise<NotificationItem[]> {
+export async function getNotificationsForCurrentUser(): Promise<
+  NotificationItem[]
+> {
   return apiFetch<NotificationItem[]>("/api/me/notifications");
 }
 
@@ -302,10 +354,13 @@ export async function loginApi(
   email: string,
   password: string,
 ): Promise<{ user: User; profile: UserProfile | null }> {
-  return apiFetch<{ user: User; profile: UserProfile | null }>("/api/auth/login", {
-    method: "POST",
-    body: JSON.stringify({ email, password }),
-  });
+  return apiFetch<{ user: User; profile: UserProfile | null }>(
+    "/api/auth/login",
+    {
+      method: "POST",
+      body: JSON.stringify({ email, password }),
+    },
+  );
 }
 
 export async function registerApi(
@@ -314,10 +369,13 @@ export async function registerApi(
   displayName: string,
   username: string,
 ): Promise<{ user: User; profile: UserProfile | null }> {
-  return apiFetch<{ user: User; profile: UserProfile | null }>("/api/auth/register", {
-    method: "POST",
-    body: JSON.stringify({ email, password, displayName, username }),
-  });
+  return apiFetch<{ user: User; profile: UserProfile | null }>(
+    "/api/auth/register",
+    {
+      method: "POST",
+      body: JSON.stringify({ email, password, displayName, username }),
+    },
+  );
 }
 
 export async function logoutApi(): Promise<void> {
@@ -336,7 +394,9 @@ export async function fetchAuthMe(): Promise<{
   if (!res.ok) {
     const text = await res.text();
     const data = text ? (JSON.parse(text) as { error?: string }) : {};
-    throw new Error(typeof data.error === "string" ? data.error : res.statusText);
+    throw new Error(
+      typeof data.error === "string" ? data.error : res.statusText,
+    );
   }
   return (await res.json()) as {
     user: User;
