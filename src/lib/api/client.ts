@@ -19,9 +19,10 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
   const data = text ? (JSON.parse(text) as unknown) : null;
 
   if (!res.ok) {
+    const d = data as { error?: string; hint?: string; detail?: string };
     const msg =
-      typeof (data as { error?: string })?.error === "string"
-        ? (data as { error: string }).error
+      typeof d?.error === "string"
+        ? [d.error, d.hint].filter(Boolean).join(" — ")
         : res.statusText;
     throw new Error(msg);
   }
