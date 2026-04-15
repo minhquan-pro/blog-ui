@@ -21,6 +21,8 @@ interface AuthContextValue {
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<boolean>;
   logout: () => void;
+  /** Làm mới user/profile từ `/api/auth/me` (sau khi cập nhật hồ sơ, v.v.). */
+  refreshSession: () => Promise<void>;
   register: (
     email: string,
     password: string,
@@ -77,6 +79,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
+  const refreshSession = useCallback(async () => {
+    const me = await fetchAuthMe();
+    if (!me) {
+      setUser(null);
+      setProfile(null);
+      return;
+    }
+    setUser(me.user);
+    setProfile(me.profile);
+  }, []);
+
   const register = useCallback(
     async (
       email: string,
@@ -105,9 +118,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       isAuthenticated: !!user,
       login,
       logout,
+      refreshSession,
       register,
     }),
-    [user, profile, login, logout, register],
+    [user, profile, login, logout, refreshSession, register],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

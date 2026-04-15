@@ -5,6 +5,7 @@ import { ThemeProvider } from "next-themes";
 
 import { AuthProvider } from "@/contexts/auth-context";
 
+import "@/i18n";
 import App from "./App";
 import "./index.css";
 
