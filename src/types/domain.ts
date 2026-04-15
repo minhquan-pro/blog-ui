@@ -6,11 +6,13 @@ export type NotificationType =
   | "new_follow"
   | "new_comment"
   | "new_clap"
+  | "new_like"
   | "mention";
 
 export interface User {
   id: string;
   email: string;
+  isAdmin: boolean;
   createdAt: string;
 }
 
@@ -41,7 +43,7 @@ export interface Post {
   status: PostStatus;
   publishedAt: string | null;
   readingTimeMinutes: number;
-  clapCount: number;
+  likeCount: number;
   responseCount: number;
   deletedAt: string | null;
   createdAt: string;

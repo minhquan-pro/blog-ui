@@ -106,7 +106,7 @@ export function HomePage() {
                 demo@editorial.local
               </code>{" "}
               / mật khẩu <code className="rounded bg-muted px-1 py-0.5 text-xs">password123</code>{" "}
-              để thử clap, bookmark và bình luận.
+              để thử thích bài, bookmark và bình luận.
             </p>
           </div>
         </aside>
