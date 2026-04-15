@@ -1,7 +1,10 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 
 import { PostCard } from "@/components/post/post-card";
+import { useBookmarkedPostIds } from "@/hooks/use-bookmarked-post-ids";
 import {
   getPostsForPublicationSlug,
   getProfileByUserId,
@@ -16,52 +19,66 @@ import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export function PublicationPage() {
+  const { t } = useTranslation();
   const { slug } = useParams<{ slug: string }>();
   const [pub, setPub] = useState<Publication | undefined>(undefined);
   const [posts, setPosts] = useState<Post[]>([]);
   const [allTags, setAllTags] = useState<Tag[]>([]);
   const [authorById, setAuthorById] = useState<Record<string, UserProfile>>({});
   const [loading, setLoading] = useState(true);
+  const { bookmarkedIds, toggleBookmarkForPost } = useBookmarkedPostIds();
+
+  const bootstrap = useCallback(async () => {
+    if (!slug) return;
+    const [publication, p, t] = await Promise.all([
+      getPublicationBySlug(slug),
+      getPostsForPublicationSlug(slug),
+      getTags(),
+    ]);
+    setPub(publication);
+    setPosts(p);
+    setAllTags(t);
+    const ids = [...new Set(p.map((x) => x.authorId))];
+    const pairs = await Promise.all(
+      ids.map(async (id) => {
+        const pr = await getProfileByUserId(id);
+        return [id, pr] as const;
+      }),
+    );
+    const map: Record<string, UserProfile> = {};
+    for (const [id, pr] of pairs) {
+      if (pr) map[id] = pr;
+    }
+    setAuthorById(map);
+    setLoading(false);
+  }, [slug]);
 
   useEffect(() => {
-    if (!slug) return;
     let c = false;
     void (async () => {
-      const [publication, p, t] = await Promise.all([
-        getPublicationBySlug(slug),
-        getPostsForPublicationSlug(slug),
-        getTags(),
-      ]);
+      if (!slug) return;
+      setLoading(true);
+      await bootstrap();
       if (c) return;
-      setPub(publication);
-      setPosts(p);
-      setAllTags(t);
-      const ids = [...new Set(p.map((x) => x.authorId))];
-      const pairs = await Promise.all(
-        ids.map(async (id) => {
-          const pr = await getProfileByUserId(id);
-          return [id, pr] as const;
-        }),
-      );
-      if (c) return;
-      const map: Record<string, UserProfile> = {};
-      for (const [id, pr] of pairs) {
-        if (pr) map[id] = pr;
-      }
-      setAuthorById(map);
-      setLoading(false);
     })();
     return () => {
       c = true;
     };
-  }, [slug]);
+  }, [bootstrap, slug]);
+
+  const onBookmark = async (postId: string) => {
+    const on = await toggleBookmarkForPost(postId);
+    toast.message(on ? t("post.savedToast") : t("post.removedToast"));
+  };
 
   if (!loading && !pub) {
     return (
       <div className="mx-auto max-w-3xl px-4 py-20 text-center">
-        <h1 className="font-display text-2xl font-semibold">Không tìm thấy publication</h1>
+        <h1 className="font-display text-2xl font-semibold">
+          {t("publication.notFound")}
+        </h1>
         <Link to="/" className="mt-4 inline-block text-accent-foreground underline">
-          Về trang chủ
+          {t("publication.backHome")}
         </Link>
       </div>
     );
@@ -90,17 +107,19 @@ export function PublicationPage() {
               to={`/pub/${pub.slug}/settings`}
               className={cn(buttonVariants({ variant: "outline" }))}
             >
-              Cài đặt
+              {t("publication.settings")}
             </Link>
           </div>
         </div>
       </div>
       <div className="mx-auto max-w-4xl space-y-8 px-4 py-12 md:px-6">
-        <h2 className="font-display text-xl font-semibold">Bài trong publication</h2>
+        <h2 className="font-display text-xl font-semibold">
+          {t("publication.postsTitle")}
+        </h2>
         {loading ? (
           <Skeleton className="h-56 w-full rounded-xl" />
         ) : posts.length === 0 ? (
-          <p className="text-muted-foreground">Chưa có bài.</p>
+          <p className="text-muted-foreground">{t("publication.empty")}</p>
         ) : (
           posts.map((post) => {
             const author = authorById[post.authorId];
@@ -111,6 +130,9 @@ export function PublicationPage() {
                 post={post}
                 author={author}
                 tags={tagsForPost(post, allTags)}
+                bookmarked={bookmarkedIds.has(post.id)}
+                onBookmarkToggle={() => void onBookmark(post.id)}
+                onPostMutated={() => void bootstrap()}
               />
             );
           })

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import { useAuth } from "@/contexts/auth-context";
@@ -8,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 export function RegisterPage() {
+  const { t } = useTranslation();
   const { register } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
@@ -22,7 +24,7 @@ export function RegisterPage() {
     try {
       const result = await register(email, password, displayName, username);
       if (result.ok) {
-        toast.success("Đăng ký thành công — đã đăng nhập.");
+        toast.success(t("register.successToast"));
         navigate("/");
       } else {
         toast.error(result.error);
@@ -34,13 +36,11 @@ export function RegisterPage() {
 
   return (
     <div className="mx-auto flex min-h-[60vh] max-w-md flex-col justify-center px-4 py-16">
-      <h1 className="font-display text-3xl font-semibold">Đăng ký</h1>
-      <p className="mt-2 text-sm text-muted-foreground">
-        Demo đưa bạn vào tài khoản <code className="rounded bg-muted px-1">demo</code>.
-      </p>
+      <h1 className="font-display text-3xl font-semibold">{t("register.title")}</h1>
+      <p className="mt-2 text-sm text-muted-foreground">{t("register.subtitle")}</p>
       <form onSubmit={onSubmit} className="mt-8 space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="reg-email">Email</Label>
+          <Label htmlFor="reg-email">{t("register.email")}</Label>
           <Input
             id="reg-email"
             type="email"
@@ -50,7 +50,7 @@ export function RegisterPage() {
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="reg-pass">Mật khẩu</Label>
+          <Label htmlFor="reg-pass">{t("register.password")}</Label>
           <Input
             id="reg-pass"
             type="password"
@@ -61,7 +61,7 @@ export function RegisterPage() {
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="name">Tên hiển thị</Label>
+          <Label htmlFor="name">{t("register.displayName")}</Label>
           <Input
             id="name"
             value={displayName}
@@ -70,24 +70,24 @@ export function RegisterPage() {
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="user">Username</Label>
+          <Label htmlFor="user">{t("register.username")}</Label>
           <Input
             id="user"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             pattern="[a-z0-9_]+"
-            title="Chữ thường, số, gạch dưới"
+            title={t("register.usernameHint")}
             required
           />
         </div>
         <Button type="submit" className="w-full" disabled={pending}>
-          {pending ? "Đang xử lý…" : "Đăng ký"}
+          {pending ? t("register.submitting") : t("register.submit")}
         </Button>
       </form>
       <p className="mt-6 text-center text-sm text-muted-foreground">
-        Đã có tài khoản?{" "}
+        {t("register.hasAccount")}{" "}
         <Link to="/login" className="text-accent-foreground underline">
-          Đăng nhập
+          {t("register.login")}
         </Link>
       </p>
     </div>
