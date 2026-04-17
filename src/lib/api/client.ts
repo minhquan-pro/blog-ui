@@ -1,4 +1,6 @@
-const base = import.meta.env.VITE_API_URL?.replace(/\/$/, "") ?? "";
+import { getApiBaseUrl } from "@/config/env";
+
+const base = getApiBaseUrl();
 
 export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const url = path.startsWith("http") ? path : `${base}${path}`;

@@ -11,9 +11,11 @@ import type {
   UserProfile,
 } from "@/types/domain";
 
+import { getApiBaseUrl } from "@/config/env";
+
 import { apiFetch } from "./client";
 
-const apiBase = import.meta.env.VITE_API_URL?.replace(/\/$/, "") ?? "";
+const apiBase = getApiBaseUrl();
 
 async function uploadImageFile(
   path: "/api/uploads/cover" | "/api/uploads/avatar",
@@ -439,7 +441,7 @@ export async function fetchAuthMe(): Promise<{
   user: User;
   profile: UserProfile | null;
 } | null> {
-  const base = import.meta.env.VITE_API_URL?.replace(/\/$/, "") ?? "";
+  const base = getApiBaseUrl();
   const res = await fetch(`${base}/api/auth/me`, { credentials: "include" });
   if (res.status === 401) {
     return null;
